@@ -1,0 +1,25 @@
+{
+  "name": "@audit-framework/playground",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "node dist/server.js",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@audit-framework/core": "workspace:*",
+    "@audit-framework/express": "workspace:*",
+    "@audit-framework/identity": "workspace:*",
+    "@audit-framework/plugin-console": "workspace:*",
+    "@audit-framework/storage-postgres": "workspace:*",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@audit-framework/typescript-config": "workspace:*",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.15.3",
+    "typescript": "5.9.2"
+  }
+}

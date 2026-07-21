@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Log Framework Playground</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar / Control Panel -->
+    <aside class="control-panel">
+      <div class="brand">
+        <span class="logo-icon">🛡️</span>
+        <div class="brand-text">
+          <h1>Audit Framework</h1>
+          <span class="badge">Playground v0.1.0</span>
+        </div>
+      </div>
+
+      <!-- Session Manager -->
+      <section class="panel-section">
+        <h2>Simulated Session</h2>
+        <p class="section-desc">Change the acting user to see how the Identity Plugin resolves their metadata.</p>
+        <div class="user-select-container">
+          <label for="session-user">Active Actor:</label>
+          <select id="session-user" class="form-input">
+            <option value="user-1" selected>Alice Vance (Engineer, Security)</option>
+            <option value="user-2">Bob Carter (Auditor, Compliance)</option>
+            <option value="admin-3">Charlie Admin (SysAdmin, IT Ops)</option>
+            <option value="anonymous">Anonymous Guest</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Preset Actions -->
+      <section class="panel-section">
+        <h2>Simulate Actions</h2>
+        <p class="section-desc">Trigger standard operations to generate audit logs instantly.</p>
+        <div class="action-grid">
+          <button class="btn btn-primary" onclick="triggerAction('document.create', 'document', 'doc_94812', 'Q3_Financials.pdf', true, 'Created financial planning document', { before: null, after: { size: '4.2MB', format: 'pdf' } })">
+            📄 Create Document
+          </button>
+          <button class="btn btn-danger" onclick="triggerAction('document.delete', 'document', 'doc_94812', 'Q3_Financials.pdf', false, 'Attempted unauthorized document deletion', null)">
+            🚫 Delete Document (Fail)
+          </button>
+          <button class="btn btn-secondary" onclick="triggerAction('settings.update', 'system_config', 'cfg_global', 'Global Settings', true, 'Modified API rate limits from 60 to 120req/min', { before: { rate_limit: 60 }, after: { rate_limit: 120 } })">
+            ⚙️ Update Settings
+          </button>
+          <button class="btn btn-secondary" onclick="triggerAction('database.backup', 'database', 'db_prod', 'Production DB', true, 'Triggered nightly backup archive creation', null)">
+            💾 Backup DB
+          </button>
+          <button class="btn btn-danger" onclick="triggerAction('database.drop', 'database', 'db_prod', 'Production DB', false, 'Attempted to drop database schema', null)">
+            💥 Drop DB (Fail)
+          </button>
+        </div>
+      </section>
+
+      <!-- Custom Event Logger -->
+      <section class="panel-section">
+        <h2>Custom Event Logger</h2>
+        <form id="custom-event-form" class="custom-form">
+          <div class="form-group">
+            <label for="custom-action">Action Name</label>
+            <input type="text" id="custom-action" placeholder="user.promote" required class="form-input">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="custom-target-type">Target Type</label>
+              <input type="text" id="custom-target-type" placeholder="user" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="custom-target-name">Target Name</label>
+              <input type="text" id="custom-target-name" placeholder="John Doe" class="form-input">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="custom-description">Description</label>
+            <input type="text" id="custom-description" placeholder="Promoted user to superuser role" class="form-input">
+          </div>
+          <div class="form-row align-center">
+            <div class="form-group-checkbox">
+              <input type="checkbox" id="custom-success" checked>
+              <label for="custom-success">Mark Success</label>
+            </div>
+            <button type="submit" class="btn btn-accent">Submit Log</button>
+          </div>
+        </form>
+      </section>
+    </aside>
+
+    <!-- Main Content Area - Log Stream -->
+    <main class="log-viewer">
+      <header class="viewer-header">
+        <div class="header-left">
+          <h2>Audit Log Stream</h2>
+          <span class="db-status-badge">
+            <span class="status-dot green"></span>
+            Postgres Storage (Mock Fallback Active)
+          </span>
+        </div>
+        <div class="header-right">
+          <input type="text" id="log-search" placeholder="Filter by action or actor..." class="search-input">
+          <button class="btn btn-icon" onclick="loadLogs()" title="Refresh Log Stream">🔄</button>
+        </div>
+      </header>
+
+      <!-- Log Entries Container -->
+      <div class="log-stream-container">
+        <div id="logs-loading" class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading audit logs...</p>
+        </div>
+        <div id="logs-empty" class="empty-state hidden">
+          <span class="empty-icon">📭</span>
+          <h3>No audit logs yet</h3>
+          <p>Trigger actions using the control panel to see real-time logs populate here.</p>
+        </div>
+        <div id="logs-list" class="logs-list">
+          <!-- Log cards rendered dynamically -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Detail Dialog / Modal -->
+  <div id="log-modal" class="modal hidden">
+    <div class="modal-overlay" onclick="closeModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Audit Event Details</h3>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <pre><code id="modal-json" class="language-json"></code></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Load logs on startup
+    document.addEventListener('DOMContentLoaded', () => {
+      loadLogs();
+
+      // Listen for user select changes
+      document.getElementById('session-user').addEventListener('change', async (e) => {
+        const userId = e.target.value;
+        try {
+          const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+          });
+          const data = await res.json();
+          if (data.success) {
+            loadLogs(); // Refresh log listing
+          }
+        } catch (err) {
+          console.error("Failed to switch session:", err);
+        }
+      });
+
+      // Custom form submission
+      document.getElementById('custom-event-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const actionType = document.getElementById('custom-action').value;
+        const targetType = document.getElementById('custom-target-type').value;
+        const targetName = document.getElementById('custom-target-name').value;
+        const description = document.getElementById('custom-description').value;
+        const success = document.getElementById('custom-success').checked;
+
+        await triggerAction(actionType, targetType || null, null, targetName || null, success, description || null, null);
+        
+        // Reset form
+        document.getElementById('custom-action').value = '';
+        document.getElementById('custom-target-type').value = '';
+        document.getElementById('custom-target-name').value = '';
+        document.getElementById('custom-description').value = '';
+      });
+
+      // Filter search
+      document.getElementById('log-search').addEventListener('input', (e) => {
+        filterLogs(e.target.value);
+      });
+    });
+
+    let allLogs = [];
+
+    async function loadLogs() {
+      const loadingEl = document.getElementById('logs-loading');
+      const emptyEl = document.getElementById('logs-empty');
+      const listEl = document.getElementById('logs-list');
+
+      loadingEl.classList.remove('hidden');
+      emptyEl.classList.add('hidden');
+      listEl.innerHTML = '';
+
+      try {
+        const res = await fetch('/api/logs');
+        const data = await res.json();
+        allLogs = data.logs || [];
+
+        loadingEl.classList.add('hidden');
+
+        if (allLogs.length === 0) {
+          emptyEl.classList.remove('hidden');
+          return;
+        }
+
+        renderLogs(allLogs);
+      } catch (err) {
+        console.error("Failed to load logs:", err);
+        loadingEl.classList.add('hidden');
+        listEl.innerHTML = `<div class="error-state">⚠️ Failed to fetch audit logs. Is server running?</div>`;
+      }
+    }
+
+    function renderLogs(logs) {
+      const listEl = document.getElementById('logs-list');
+      listEl.innerHTML = '';
+
+      logs.forEach(log => {
+        const card = document.createElement('div');
+        card.className = `log-card ${log.status}`;
+        card.onclick = () => showDetails(log);
+
+        const statusIcon = log.status === 'success' ? '✅' : '❌';
+        const timestamp = new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        // Safely extract names/details
+        const actorName = log.actor.name || log.actor.id;
+        const targetInfo = log.target ? `on <strong>${log.target.type}:${log.target.name || log.target.id}</strong>` : '';
+
+        card.innerHTML = `
+          <div class="log-card-header">
+            <span class="status-indicator">${statusIcon}</span>
+            <span class="timestamp">${timestamp}</span>
+            <span class="action-tag">${log.action}</span>
+          </div>
+          <div class="log-card-body">
+            <p>${log.description || `Executed ${log.action}`}</p>
+            <div class="log-meta-footer">
+              <span class="actor-info">👤 <strong>${actorName}</strong> (${log.actor.type})</span>
+              ${log.target ? `<span class="target-info">🎯 ${log.target.type}: ${log.target.name || log.target.id}</span>` : ''}
+            </div>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    async function triggerAction(actionType, targetType, targetId, targetName, success, description, changes) {
+      try {
+        const res = await fetch('/api/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ actionType, targetType, targetId, targetName, success, description, changes })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await loadLogs();
+        }
+      } catch (err) {
+        console.error("Failed to trigger action:", err);
+      }
+    }
+
+    function filterLogs(query) {
+      if (!query) {
+        renderLogs(allLogs);
+        return;
+      }
+      const lower = query.toLowerCase();
+      const filtered = allLogs.filter(log => {
+        return log.action.toLowerCase().includes(lower) ||
+               (log.description && log.description.toLowerCase().includes(lower)) ||
+               log.actor.id.toLowerCase().includes(lower) ||
+               (log.actor.name && log.actor.name.toLowerCase().includes(lower)) ||
+               (log.target && log.target.type.toLowerCase().includes(lower));
+      });
+      renderLogs(filtered);
+    }
+
+    function showDetails(log) {
+      const modal = document.getElementById('log-modal');
+      const jsonEl = document.getElementById('modal-json');
+      jsonEl.textContent = JSON.stringify(log, null, 2);
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('log-modal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
