@@ -63,4 +63,4 @@ const eventSchema = new Schema<AuditEvent>({
 
 });
 
-export const EventModel = new Model('Events', eventSchema)
+export const EventModel = new Model('Events', eventSchema);
